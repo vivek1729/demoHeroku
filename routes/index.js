@@ -8,6 +8,11 @@ router.get('/find', function(req, res) {
   res.send({'users':users, 'status':'OK', 'count':user_collection.count()});
 });
 
+
+router.post('/find', function(req, res) {
+  res.send({'users':users, 'status':'Post request working!'});
+});
+
 router.post('/create', function(req, res) {
   var user_collection = req.app.get('user_collection');
   var user_obj = req.body;
