@@ -10,7 +10,7 @@ router.get('/find', function(req, res) {
 
 
 router.post('/find', function(req, res) {
-  res.send({'users':users, 'status':'Post request working!'});
+  res.send({'status':'Post request working!'});
 });
 
 router.post('/create', function(req, res) {
