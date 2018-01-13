@@ -6,8 +6,13 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var loki = require('lokijs');
 var routes = require('./routes/index');
+var socketHandler = require('./routes/socket_handler');
+var socket_io    = require( "socket.io" );
 
 var app = express();
+// Socket.io
+var io           = socket_io();
+app.io           = io;
 
 var users = null;
 var db = new loki('quickstart.json', {
@@ -54,6 +59,10 @@ app.use(function(req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
+});
+
+io.on('connection', function (socket) {
+  socketHandler(socket);
 });
 
 // error handlers
