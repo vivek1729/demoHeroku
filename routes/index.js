@@ -4,7 +4,8 @@ var router = express.Router();
 /* GET home page. */
 router.get('/find', function(req, res) {
   var user_collection = req.app.get('user_collection');
-  var users = user_collection.find({});
+  var group_id = req.query.group_id; 
+  var users = user_collection.find({'group_id':group_id});
   res.send({'users':users, 'status':'OK', 'count':user_collection.count()});
 });
 
