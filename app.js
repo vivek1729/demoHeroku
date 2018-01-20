@@ -15,7 +15,7 @@ var io           = socket_io();
 app.io           = io;
 
 var users = null;
-var db = new loki('quickstart.json', {
+var db = new loki('survey_data.json', {
   autoload: true,
   autoloadCallback : function(){
     users = db.getCollection('users');
