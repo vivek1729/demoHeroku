@@ -22,11 +22,13 @@ var db = new loki('survey_data.json', {
     if (users === null) {
       users = db.addCollection('users');
     }
+    user_assoc = db.addCollection('user_assoc');
     app.set('user_collection',users);
+    app.set('user_assoc',user_assoc);
     console.log('Autosave successful');
   },
   autosave: true, 
-  autosaveInterval: 4000 // save every four seconds for our example
+  autosaveInterval: 40000 // save every four seconds for our example
 });
 
 // view engine setup
