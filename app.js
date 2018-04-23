@@ -13,6 +13,7 @@ var app = express();
 // Socket.io
 var io           = socket_io();
 app.io           = io;
+app.socket_hash = {};
 
 var users = null;
 var db = new loki('survey_data.json', {
