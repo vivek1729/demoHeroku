@@ -39,12 +39,14 @@ module.exports = function (socket) {
     if(unmatched_user){
       socket.join(tmp_group_id,function(){
         console.log('Group joined successfully');
-        socket.emit('join_success',{'users':[], 'group_id':tmp_group_id, 'status':'OK', 'count':user_collection.count()});
+        socket.emit('join_success',
+          {'users':[], 'group_id':tmp_group_id, 'role':1, 'status':'OK', 'count':user_collection.count()});
         console.log('Sent the join_success event');
       });
      app.socket_hash[unmatched_user.user_id].join(tmp_group_id,function(){
         console.log('Group joined successfully');
-        app.socket_hash[unmatched_user.user_id].emit('join_success',{'users':[], 'group_id':tmp_group_id, 'status':'OK', 'count':user_collection.count()});
+        app.socket_hash[unmatched_user.user_id].emit('join_success',
+          {'users':[], 'group_id':tmp_group_id, 'role':2, 'status':'OK', 'count':user_collection.count()});
         console.log('Sent the join_success event');
       });
 
