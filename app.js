@@ -29,7 +29,7 @@ var db = new loki('survey_data.json', {
     console.log('Autosave successful');
   },
   autosave: true, 
-  autosaveInterval: 40000 // save every four seconds for our example
+  autosaveInterval: 4000 // save every four seconds for our example
 });
 
 // view engine setup
