@@ -1,3 +1,7 @@
+var experiment_config = require('../experiment_config.json');
+console.log("Experiment settings");
+console.log(experiment_config);
+
 function generatePayOff(){
   var pay_off = [];
   for(var i=0;i<4;i++){
@@ -8,9 +12,67 @@ function generatePayOff(){
   return pay_off;
 }
 
+function getUserMap(user_obj){
+  //Finds user in the experiment config and sets its properties
+  var period_user_map = null;
+  experiment_config.periods.forEach(function(item){
+    if(item.period === user_obj.period){
+      item.users_map.forEach(function(mapping){
+        if(mapping.user_1 === user_obj.user_id|| mapping.user_2 === user_obj.user_id){
+          period_user_map = mapping;
+          return period_user_map;
+        }
+      });
+    }
+  });
+  //period_user_map contains the user mapping for that specific period
+  return period_user_map;
+}
+
+function setUserProperties(user_obj){
+  var period_user_map = getUserMap(user_obj);
+  if(period_user_map != null){
+    //Set role_id
+    if(period_user_map.user_1 === user_obj.user_id)
+      user_obj.role_id = 1;
+    else
+      user_obj.role_id = 2;
+    //Set group_id
+    user_obj.group_id = period_user_map.group;
+    //Set payoff
+    user_obj.payoff = period_user_map.payoff;
+  }
+  return user_obj;
+}
+
+function findOtherUserId(user_obj){
+  var period_user_map = getUserMap(user_obj);
+  var other_user_id = -1;
+  if(period_user_map != null){
+    //Set role_id
+    if(period_user_map.user_1 === user_obj.user_id)
+      other_user_id = period_user_map.user_2;
+    else
+      other_user_id = period_user_map.user_1;
+  }
+  return other_user_id;
+}
+
 function createStateForUser(socket,user_obj){
     var app = require('../app');
     var user_assoc = app.get('user_assoc');
+
+    //Set properties for this new user
+    user_obj = setUserProperties(user_obj);
+
+    //Get the other user id see if it exists
+    var other_user_id = findOtherUserId(user_obj);
+    var unmatched_user = user_assoc.findOne({'user_id':other_user_id});
+
+    //I assume that both the users belong to one group in a period.
+    var tmp_group_id = user_obj.group_id;
+
+    /*
     var unmatched_user = user_assoc.findOne({'group_id':-1});
     
     //Get highest group id
@@ -24,6 +86,15 @@ function createStateForUser(socket,user_obj){
       user_assoc.update(unmatched_user);
       user_obj.group_id = tmp_group_id;
     } 
+
+    Earlier we used to fetch the first unmatched user and create a group
+    Now all this happens through the experiment config, so the first step
+    would be to find the other user that is supposd to match with user_obj
+    If that user exist then great, we match otherwise we insert user_obj
+    and wait for the other user to join
+    */
+
+   
     //Persist changes to database
     user_assoc.insert(user_obj);
 
@@ -33,7 +104,7 @@ function createStateForUser(socket,user_obj){
         This is where the matching happens
         We find another unmatched user
         Create pay-offs for a 2x2 grid and send the same values to both people.
-      */
+      
       var pay_off = generatePayOff();
       //Save the pay_off to database
       user_assoc.findAndUpdate({'group_id':tmp_group_id}, 
@@ -41,6 +112,10 @@ function createStateForUser(socket,user_obj){
           obj.payoff = pay_off;
           return obj;
       });
+      */
+
+      //I do not have to create payoff or anything now
+      //As soon as users match, add them to the group, send state.
 
       //Send current state of matched users to them.
       socket.join(tmp_group_id,function(){
@@ -94,15 +169,12 @@ module.exports = function (socket) {
   });
 
   socket.on('match', function (data) {
-
-    var user_obj = {user_id:data.user_id,role_id:1};
+    //Notice, I initialize users with default roles and periods.
+    var user_obj = {user_id:data.user_id,role_id:1,period:1};
     var app = require('../app');
     app.socket_hash[data.user_id] = socket;
     var user_assoc = app.get('user_assoc');
-    console.log('User association collection');
-    console.log(user_assoc);
     var existing_user = user_assoc.findOne({'user_id':user_obj.user_id});
-    console.log(existing_user);
     if(existing_user){
       //This user_id already exists in the Database, restore state
       restoreStateForUser(socket,existing_user);
