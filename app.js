@@ -1,3 +1,4 @@
+global.__basedir = __dirname;
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -8,12 +9,14 @@ var loki = require('lokijs');
 var routes = require('./routes/index');
 var socketHandler = require('./routes/socket_handler');
 var socket_io    = require( "socket.io" );
+var fileUpload = require('express-fileupload');
 
 var app = express();
 // Socket.io
 var io           = socket_io();
 app.io           = io;
 app.socket_hash = {};
+app.experiment_config = require('./configs/experiment_config.json');
 
 var users = null;
 var user_assoc = null;
@@ -36,6 +39,7 @@ var db = new loki('survey_data.json', {
   autosaveInterval: 4000 // save every four seconds for our example
 });
 
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -49,6 +53,7 @@ app.set('user_db',db);
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(fileUpload());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 

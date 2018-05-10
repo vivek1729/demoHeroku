@@ -1,7 +1,3 @@
-var experiment_config = require('../experiment_config.json');
-console.log("Experiment settings");
-console.log(experiment_config);
-
 function generatePayOff(){
   var pay_off = [];
   for(var i=0;i<4;i++){
@@ -14,6 +10,10 @@ function generatePayOff(){
 
 function getUserMap(user_obj){
   //Finds user in the experiment config and sets its properties
+  var app = require('../app');
+  var experiment_config = app.experiment_config;
+  console.log("Experiment settings");
+  console.log(experiment_config);
   var period_user_map = null;
   experiment_config.periods.forEach(function(item){
     if(item.period === user_obj.period){

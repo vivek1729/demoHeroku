@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+  form(ref='uploadForm', action='/api/upload', method='post', enctype='multipart/form-data')
+    input(type='file', name='sampleFile')
+    input(type='submit', value='Upload!')
+

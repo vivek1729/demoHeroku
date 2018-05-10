@@ -1,5 +1,45 @@
 var express = require('express');
 var router = express.Router();
+var path = require('path');
+var UPLOAD_PATH = path.join(__basedir, 'configs');
+
+router.get('/', function(req, res) {
+  console.log('App config');
+  var app = require('../app');
+  console.log(app.experiment_config);
+  res.render('file_upload', { title: 'Hey', message: 'Hello there!' })
+});
+
+router.post('/upload', function(req, res) {
+  console.log('Handler called?');
+  if (!req.files)
+    return res.status(400).send('No files were uploaded.');
+ 
+  // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
+  let sampleFile = req.files.sampleFile;
+  console.log(sampleFile);
+  // Use the mv() method to place the file somewhere on your server
+  var file_upload_path = `${UPLOAD_PATH}/experiment_config.json`;
+  console.log(file_upload_path);
+  sampleFile.mv(file_upload_path, function(err) {
+    if (err){
+      console.log(err);
+      return res.status(500).send(err);
+    }
+    res.send('File uploaded!');
+  });
+});
+
+router.get('/config', function(req, res) {
+  //delete require.cache[require.resolve('./configs/experiment_config.json')];
+  delete require.cache[require.resolve('../configs/experiment_config.json')];
+  //var config = require('config');
+  var app = require('../app');
+  app.experiment_config = require('../configs/experiment_config.json');
+  console.log('Current config');
+  res.send({'status':'OK', 'cnf':app.experiment_config});
+});
+
 
 /* GET home page. */
 router.get('/find', function(req, res) {
