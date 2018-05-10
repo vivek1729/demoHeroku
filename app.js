@@ -16,6 +16,7 @@ app.io           = io;
 app.socket_hash = {};
 
 var users = null;
+var user_assoc = null;
 var db = new loki('survey_data.json', {
   autoload: true,
   autoloadCallback : function(){
@@ -23,7 +24,10 @@ var db = new loki('survey_data.json', {
     if (users === null) {
       users = db.addCollection('users');
     }
-    user_assoc = db.addCollection('user_assoc');
+    user_assoc = db.getCollection('user_assoc');
+    if(user_assoc == null){
+      user_assoc = db.addCollection('user_assoc');
+    }
     app.set('user_collection',users);
     app.set('user_assoc',user_assoc);
     console.log('Autosave successful');
