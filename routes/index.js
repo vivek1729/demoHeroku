@@ -30,14 +30,23 @@ router.post('/upload', function(req, res) {
   });
 });
 
-router.get('/config', function(req, res) {
+router.get('/restart_experiment', function(req, res) {
   //delete require.cache[require.resolve('./configs/experiment_config.json')];
+
+  //RESET CONFIG
   delete require.cache[require.resolve('../configs/experiment_config.json')];
   //var config = require('config');
-  var app = require('../app');
-  app.experiment_config = require('../configs/experiment_config.json');
+  req.app.experiment_config = require('../configs/experiment_config.json');
+
+  //CLEAR DATA
+  var user_assoc = req.app.get('user_assoc');
+  var user_collection = req.app.get('user_collection');
+  user_assoc.clear();
+  user_collection.clear();
+  //CLEAR SOCKETS
+  req.app.socket_hash = {};
   console.log('Current config');
-  res.send({'status':'OK', 'cnf':app.experiment_config});
+  res.send({'status':'OK', 'cnf':req.app.experiment_config});
 });
 
 

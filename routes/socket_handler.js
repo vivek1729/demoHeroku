@@ -12,8 +12,8 @@ function getUserMap(user_obj){
   //Finds user in the experiment config and sets its properties
   var app = require('../app');
   var experiment_config = app.experiment_config;
-  console.log("Experiment settings");
-  console.log(experiment_config);
+  //console.log("Experiment settings");
+  //console.log(experiment_config);
   var period_user_map = null;
   experiment_config.periods.forEach(function(item){
     if(item.period === user_obj.period){
@@ -41,8 +41,10 @@ function setUserProperties(user_obj){
     user_obj.group_id = period_user_map.group;
     //Set payoff
     user_obj.payoff = period_user_map.payoff;
+    return user_obj;
   }
-  return user_obj;
+  return null;
+  
 }
 
 function findOtherUserId(user_obj){
@@ -58,20 +60,28 @@ function findOtherUserId(user_obj){
   return other_user_id;
 }
 
-function createStateForUser(socket,user_obj){
+function createStateForUser(user_obj){
     var app = require('../app');
     var user_assoc = app.get('user_assoc');
-
+    var unmatched_user = null;
     //Set properties for this new user
     user_obj = setUserProperties(user_obj);
+    if(user_obj){
+      console.log('User to be added to DB');
+      console.log(user_obj);
+      //Persist changes to database
+      user_assoc.insert(user_obj);
+      //Get the other user id see if it exists
+      var other_user_id = findOtherUserId(user_obj);
+      unmatched_user = user_assoc.findOne({'user_id':other_user_id, 'period':user_obj.period});
 
-    //Get the other user id see if it exists
-    var other_user_id = findOtherUserId(user_obj);
-    var unmatched_user = user_assoc.findOne({'user_id':other_user_id});
+      //I assume that both the users belong to one group in a period.
+      var tmp_group_id = user_obj.group_id;
 
-    //I assume that both the users belong to one group in a period.
-    var tmp_group_id = user_obj.group_id;
-
+    }
+    else{
+      console.log('Can not create user. Does not exist in config');
+    }
     /*
     var unmatched_user = user_assoc.findOne({'group_id':-1});
     
@@ -94,10 +104,6 @@ function createStateForUser(socket,user_obj){
     and wait for the other user to join
     */
 
-   
-    //Persist changes to database
-    user_assoc.insert(user_obj);
-
     //We found a match, here
     if(unmatched_user){
       /*
@@ -118,18 +124,32 @@ function createStateForUser(socket,user_obj){
       //As soon as users match, add them to the group, send state.
 
       //Send current state of matched users to them.
-      socket.join(tmp_group_id,function(){
-        console.log('Group joined successfully');
-        socket.emit('join_success',
-          {'status':'OK', 'state':user_obj});
-        console.log('Sent the join_success event');
-      });
-      app.socket_hash[unmatched_user.user_id].join(tmp_group_id,function(){
-        console.log('Group joined successfully');
-        app.socket_hash[unmatched_user.user_id].emit('join_success',
-          {'status':'OK', 'state':unmatched_user});
-        console.log('Sent the join_success event');
-      });
+      var user1 = app.socket_hash[user_obj.user_id];
+      var user2 = app.socket_hash[unmatched_user.user_id];
+      try{
+          user1.join(tmp_group_id,function(){
+          console.log('Group joined successfully');
+          user1.emit('join_success',
+            {'status':'OK', 'state':user_obj});
+          console.log('Sent the join_success event');
+        });
+      } 
+      
+      catch(err){
+        console.log(err);
+      }
+      
+      try{
+          user2.join(tmp_group_id,function(){
+          console.log('Group joined successfully');
+          user2.emit('join_success',
+            {'status':'OK', 'state':unmatched_user});
+          console.log('Sent the join_success event');
+        });
+      }    
+      catch(err){
+        console.log(err);
+      }
 
     }
 
@@ -150,6 +170,41 @@ function restoreStateForUser(socket,user_obj){
     
 };
 
+function startNextPeriod(new_period){
+  console.log('Creating users for new period'+new_period);
+  var app = require('../app');
+  var user_assoc = app.get('user_assoc');
+  var experiment_config = app.experiment_config;
+  experiment_config.periods.forEach(function(item){
+    if(item.period === new_period){
+      item.users_map.forEach(function(mapping){
+        //Insert each user into the database and send socket events
+        
+        //Create first user      
+        var user_1 = {user_id:mapping.user_1 , period: new_period};
+        createStateForUser(user_1);
+
+        //Create second user
+        var user_2 = {user_id:mapping.user_2 , period: new_period};
+        createStateForUser(user_2);
+        
+      });
+    }
+  });
+  console.log('New period has started..');
+}
+
+function checkAndStartNextPeriod(current_period){
+   var app = require('../app');
+   var user_assoc = app.get('user_assoc');
+   var results = user_assoc.find({ result: { $finite: false },period: current_period});
+   console.log(results);
+   if(results.length === 0){
+    console.log('This period is over.');
+    console.log('I can start the next period now.');
+    startNextPeriod(current_period+1);
+   }
+};
 
 module.exports = function (socket) {
   //socket functions go here...
@@ -170,18 +225,31 @@ module.exports = function (socket) {
 
   socket.on('match', function (data) {
     //Notice, I initialize users with default roles and periods.
-    var user_obj = {user_id:data.user_id,role_id:1,period:1};
+
+    var user_obj = {user_id:data.user_id};
     var app = require('../app');
     app.socket_hash[data.user_id] = socket;
     var user_assoc = app.get('user_assoc');
-    var existing_user = user_assoc.findOne({'user_id':user_obj.user_id});
+    var new_period = user_assoc.max('period');
+    //Find the current period and update user params
+    if(new_period > 1 && user_obj.period == undefined){
+      user_obj.period = new_period;
+    }
+    else if(user_obj.period == undefined){
+      new_period = 1;
+      user_obj.period = new_period;
+    }
+    else
+      new_period = user_obj.period;
+    //Find existing user for this new period
+    var existing_user = user_assoc.findOne({'user_id':user_obj.user_id,'period':new_period});
     if(existing_user){
       //This user_id already exists in the Database, restore state
       restoreStateForUser(socket,existing_user);
     }
     else{
       //Create new state for user
-      createStateForUser(socket,user_obj);
+      createStateForUser(user_obj);
     }
      
   });
@@ -191,6 +259,7 @@ module.exports = function (socket) {
     var app = require('../app');
     var user_collection = app.get('user_collection');
     var user_assoc = app.get('user_assoc');
+    var current_period = data.period;
     var result_hash = {
       '02':0,
       '20':0,
@@ -201,13 +270,13 @@ module.exports = function (socket) {
       '32':3
     };
 
-    var group_users = user_assoc.find({'group_id':data.group_id});
+    var group_users = user_assoc.find({'group_id':data.group_id,'period':current_period});
     var other_user = group_users.filter(
       function( item ){
         return item.user_id != data.user_id;
       });
     //Update this users choice into the database
-    user_assoc.findAndUpdate({'user_id':data.user_id,'group_id':data.group_id}, 
+    user_assoc.findAndUpdate({'user_id':data.user_id, 'group_id':data.group_id, 'period':current_period}, 
         function(obj){
           obj.choice = data.message;
           return obj;
@@ -225,11 +294,14 @@ module.exports = function (socket) {
       socket.to(data.group_id).emit('choice_result',result);
       socket.emit('choice_result',result);
       //Save the result to the database too.
-      user_assoc.findAndUpdate({'group_id':data.group_id}, 
+      user_assoc.findAndUpdate({'group_id':data.group_id, 'period':current_period}, 
         function(obj){
           obj.result = result.res;
           return obj;
       });
+
+      //Check here if all users are finished for the period, if yes, start new period
+      checkAndStartNextPeriod(current_period);
     }
 
   });
