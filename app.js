@@ -4,19 +4,22 @@ var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
+var session = require('express-session');
 var bodyParser = require('body-parser');
 var loki = require('lokijs');
-var routes = require('./routes/index');
+var app_routes = require('./routes/index');
+var api_routes = require('./routes/api_routes');
 var socketHandler = require('./routes/socket_handler');
 var socket_io    = require( "socket.io" );
 var fileUpload = require('express-fileupload');
-
+var flash = require('express-flash');
 var app = express();
 // Socket.io
 var io           = socket_io();
 app.io           = io;
 app.socket_hash = {};
 app.experiment_config = require('./configs/experiment_config.json');
+
 
 var users = null;
 var user_assoc = null;
@@ -57,6 +60,17 @@ app.use(fileUpload());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+var sessionStore = new session.MemoryStore;
+app.use(session({
+    cookie: { maxAge: 60000 },
+    store: sessionStore,
+    saveUninitialized: true,
+    resave: 'true',
+    secret: 'baap'
+}));
+app.use(flash());
+
+
 //Set Access control headers to white list servers or something
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -64,7 +78,8 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.use('/api', routes);
+app.use('/', app_routes);
+app.use('/api', api_routes);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

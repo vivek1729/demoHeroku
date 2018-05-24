@@ -3,3 +3,8 @@ extends layout
 block content
   h1= title
   p Welcome to #{title}
+  a(href='/upload') Upload new config
+  a(href='/restart_experiment') Restart experiment
+  - if (messages.info)
+    .message.info
+      span= messages.info
