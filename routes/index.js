@@ -31,14 +31,14 @@ router.get('/', function(req, res) {
   };
   console.log('View info formed..');
   console.log(view_info);
-  res.render('index', { title: 'Hey', message: 'Hello there!' })
+  res.render('index', { title: 'Experiment', message: 'Dashboard' })
 });
 
 router.get('/upload', function(req, res) {
   console.log('App config');
   var app = require('../app');
   console.log(app.experiment_config);
-  res.render('file_upload', { title: 'Hey', message: 'Hello there!' })
+  res.render('file_upload', { title: 'Experiment Configuration', message: 'Upload new file' })
 });
 
 router.post('/upload', function(req, res) {
