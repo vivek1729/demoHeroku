@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  h1= title
+  - code = JSON.stringify(config,undefined,1)
+  pre(id='config_code') #{code}

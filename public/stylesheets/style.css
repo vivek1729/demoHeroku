@@ -6,3 +6,27 @@ body {
 a {
   color: #00B7FF;
 }
+
+.user_item span {
+    display: inline-block;
+    width: 80px;
+    margin-left: 10px;
+    margin-right: 10px;
+    overflow: scroll;
+}
+
+pre#config_code {
+  background-color: #bde6b3;
+}
+
+#exp_header {
+	background-color: #bde6b3;
+	margin-top: 40px;
+}
+#exp_header span{
+    display: inline-block;
+    width: 80px;
+    margin-left: 10px;
+    margin-right: 10px;
+    overflow: scroll;
+}

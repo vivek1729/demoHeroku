@@ -3,8 +3,25 @@ extends layout
 block content
   h1= title
   p Welcome to #{title}
+  a(href='/view_config') View current config
   a(href='/upload') Upload new config
   a(href='/restart_experiment') Restart experiment
   - if (messages.info)
-    .message.info
+  .message.info
       span= messages.info
+  #exp_header
+    span Period
+    span User ID
+    span Group ID
+    span Payoff array
+    span User choice
+    span Result
+  each val, index in user_data
+    .user_item
+      span= val.period
+      span= val.user_id
+      span= val.group_id
+      span= val.payoff
+      span= val.choice
+      span= val.result
+

@@ -9,36 +9,36 @@ router.get('/', function(req, res) {
   var user_data = user_assoc.find();
   var view_info = [];
   var period_entry,group_entry,period_idx,group_idx;
-  for (record in user_data){
-    period_idx = view_info.map(function(x){return x.period;}).indexOf(record.period);
-    if(period_idx === -1){
-      //Insert new period
-      period_entry = {'period':record.period,'groups':[]};
-      group_entry = {'group_id':record.group_id,'pay_off':record.pay_off,'users':[{'user_id':record.user_id,'choice':record.choice}]};
-      period_entry.groups.push(group_entry);
-      view_info.push(period_entry);
-    }
-    else{
-      group_idx = view_info[period_idx]['groups'].map(function(x) {return x.period; }).indexOf(record.period);
-      if(group_idx === -1){
-        view_info[period_idx]['groups'][group_idx]['users'].push({'user_id':record.user_id,'choice':record.choice});
-      }
-      else{
-        group_entry = {'group_id':record.group_id,'pay_off':record.pay_off,'users':[{'user_id':record.user_id,'choice':record.choice}]};
-        view_info[period_idx].groups.push(group_entry);
-      }
-    }
-  };
-  console.log('View info formed..');
-  console.log(view_info);
-  res.render('index', { title: 'Experiment', message: 'Dashboard' })
+  // for (record in user_data){
+  //   period_idx = view_info.map(function(x){return x.period;}).indexOf(record.period);
+  //   if(period_idx === -1){
+  //     //Insert new period
+  //     period_entry = {'period':record.period,'groups':[]};
+  //     group_entry = {'group_id':record.group_id,'pay_off':record.pay_off,'users':[{'user_id':record.user_id,'choice':record.choice}]};
+  //     period_entry.groups.push(group_entry);
+  //     view_info.push(period_entry);
+  //   }
+  //   else{
+  //     group_idx = view_info[period_idx]['groups'].map(function(x) {return x.period; }).indexOf(record.period);
+  //     if(group_idx === -1){
+  //       view_info[period_idx]['groups'][group_idx]['users'].push({'user_id':record.user_id,'choice':record.choice});
+  //     }
+  //     else{
+  //       group_entry = {'group_id':record.group_id,'pay_off':record.pay_off,'users':[{'user_id':record.user_id,'choice':record.choice}]};
+  //       view_info[period_idx].groups.push(group_entry);
+  //     }
+  //   }
+  // };
+  res.render('index', { title: 'Experiment', message: 'Dashboard', user_data: user_data });
+});
+
+router.get('/view_config', function(req, res) {
+  var view_json = req.app.experiment_config;
+  res.render('view_config', { title: 'Active experiment configuration', config: view_json });
 });
 
 router.get('/upload', function(req, res) {
-  console.log('App config');
-  var app = require('../app');
-  console.log(app.experiment_config);
-  res.render('file_upload', { title: 'Experiment Configuration', message: 'Upload new file' })
+  res.render('file_upload', { title: 'Experiment Configuration', message: 'Upload new file' });
 });
 
 router.post('/upload', function(req, res) {
