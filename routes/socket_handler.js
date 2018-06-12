@@ -8,6 +8,27 @@ function generatePayOff(){
   return pay_off;
 }
 
+function getGroupUsers(user_obj){
+  //Finds user in the experiment config and sets its properties
+  var app = require('../app');
+  var experiment_config = app.experiment_config;
+  //console.log("Experiment settings");
+  //console.log(experiment_config);
+  var group_users = [];
+  experiment_config.periods.forEach(function(item){
+    if(item.period === user_obj.period){
+      item.users_map.forEach(function(mapping){
+        //If user encountered with same group, push to array
+        if(mapping.group === user_obj.group_id){
+          group_users.push(mapping);
+        }
+      });
+    }
+  });
+  //period_user_map contains the user mapping for that specific period
+  return group_users;
+}
+
 function getUserMap(user_obj){
   //Finds user in the experiment config and sets its properties
   var app = require('../app');
@@ -18,7 +39,15 @@ function getUserMap(user_obj){
   experiment_config.periods.forEach(function(item){
     if(item.period === user_obj.period){
       item.users_map.forEach(function(mapping){
+
+        /***
+        Legacy config map
         if(mapping.user_1 === user_obj.user_id|| mapping.user_2 === user_obj.user_id){
+          period_user_map = mapping;
+          return period_user_map;
+        }
+        ***/
+        if(mapping.user === user_obj.user_id){
           period_user_map = mapping;
           return period_user_map;
         }
@@ -33,10 +62,15 @@ function setUserProperties(user_obj){
   var period_user_map = getUserMap(user_obj);
   if(period_user_map != null){
     //Set role_id
+    /***
+    Infering role_id from user mapping
     if(period_user_map.user_1 === user_obj.user_id)
       user_obj.role_id = 1;
     else
       user_obj.role_id = 2;
+    ***/
+
+    user_obj.role_id = period_user_map.role_id;
     //Set group_id
     user_obj.group_id = period_user_map.group;
     //Set payoff
@@ -47,6 +81,8 @@ function setUserProperties(user_obj){
   
 }
 
+/***
+Legacy function definition, fetched user_2 or user_1 from single entry in config
 function findOtherUserId(user_obj){
   var period_user_map = getUserMap(user_obj);
   var other_user_id = -1;
@@ -57,6 +93,21 @@ function findOtherUserId(user_obj){
     else
       other_user_id = period_user_map.user_1;
   }
+  return other_user_id;
+}
+***/
+
+function findOtherUserId(user_obj){
+  var group_users = getGroupUsers(user_obj);
+  var other_user_id = -1;
+
+  //Returns the first user in the group whose ID does NOT match user_obj
+  group_users.forEach(function(item){
+    if(item.user !== user_obj.user_id){
+      other_user_id = item.user;
+      return;
+    }
+  });
   return other_user_id;
 }
 
@@ -74,7 +125,8 @@ function createStateForUser(user_obj){
       //Get the other user id see if it exists
       var other_user_id = findOtherUserId(user_obj);
       unmatched_user = user_assoc.findOne({'user_id':other_user_id, 'period':user_obj.period});
-
+      console.log('Other user id '+other_user_id);
+      console.log(unmatched_user);
       //I assume that both the users belong to one group in a period.
       var tmp_group_id = user_obj.group_id;
 
@@ -161,7 +213,7 @@ function restoreStateForUser(socket,user_obj){
     if(user_group >= 0){
       //That means the user was matched with someone else, join this socket to that group and send state
       socket.join(user_group,function(){
-        console.log('Group rejoined');
+        console.log('Group rejoined because of state restore');
         socket.emit('join_success',
           {'status':'OK', 'state':user_obj});
         console.log('Sent the join_success event');
@@ -178,8 +230,10 @@ function startNextPeriod(new_period){
   experiment_config.periods.forEach(function(item){
     if(item.period === new_period){
       item.users_map.forEach(function(mapping){
+
         //Insert each user into the database and send socket events
-        
+        /***
+        Legacy code for old exp configuration
         //Create first user      
         var user_1 = {user_id:mapping.user_1 , period: new_period};
         createStateForUser(user_1);
@@ -187,7 +241,8 @@ function startNextPeriod(new_period){
         //Create second user
         var user_2 = {user_id:mapping.user_2 , period: new_period};
         createStateForUser(user_2);
-        
+        ***/
+        createStateForUser({user_id:mapping.user , period: new_period});
       });
     }
   });
@@ -197,9 +252,23 @@ function startNextPeriod(new_period){
 function checkAndStartNextPeriod(current_period){
    var app = require('../app');
    var user_assoc = app.get('user_assoc');
-   var results = user_assoc.find({ result: { $finite: false },period: current_period});
-   console.log(results);
-   if(results.length === 0){
+
+   //Find users in current period with finite results from DB
+   var results = user_assoc.find({ result: { $finite: true },period: current_period});
+   //console.log(results);
+
+
+   var experiment_config = app.experiment_config;
+   //Find total users for current period
+   var total_users = 0;
+   experiment_config.periods.forEach(function(item){
+      if(item.period === current_period){
+        total_users = item.users_map.length;
+      }
+   });
+
+   //If the above counts match, we can start a new period.
+   if(results.length === total_users){
     console.log('This period is over.');
     console.log('I can start the next period now.');
     startNextPeriod(current_period+1);
